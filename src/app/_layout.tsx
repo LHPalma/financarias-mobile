@@ -1,3 +1,4 @@
+import { ApolloProvider } from "@apollo/client";
 import { ArchivoBlack_400Regular } from "@expo-google-fonts/archivo-black";
 import {
 	Inter_400Regular,
@@ -11,6 +12,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
+import { apolloClient } from "@/lib/apollo-client";
 import { ThemeOverrideProvider, useThemeOverride } from "@/hooks/theme-override";
 
 SplashScreen.preventAutoHideAsync();
@@ -36,9 +38,11 @@ export default function RootLayout() {
 	}
 
 	return (
-		<ThemeOverrideProvider>
-			<RootLayoutNav />
-		</ThemeOverrideProvider>
+		<ApolloProvider client={apolloClient}>
+			<ThemeOverrideProvider>
+				<RootLayoutNav />
+			</ThemeOverrideProvider>
+		</ApolloProvider>
 	);
 }
 
