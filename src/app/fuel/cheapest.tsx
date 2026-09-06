@@ -1,15 +1,39 @@
 import { gql, useQuery } from "@apollo/client";
 import { useState } from "react";
-import { FlatList, Linking, Modal, Platform, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { HardShadowBox } from "@/components/hard-shadow-box";
 import { MarqueeText } from "@/components/marquee-text";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { VintageWindowModal } from "@/components/vintage-window-modal";
 import { AccentColor, BorderWidth, CategoryColors, Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
+const FUEL_STATION_FIELDS = gql`
+	fragment FuelStationFields on FuelStation {
+		name
+		brand
+		municipality
+		state
+		street
+		number
+		complement
+		neighborhood
+		postalCode {
+			value
+		}
+	}
+`;
+
+// Duas queries, não uma com $where opcional: quando o filtro vem como variável de um
+// tipo genérico (FuelPriceFilterInput), o HotChocolate assume o pior caso de custo
+// possível pra esse tipo (mesmo com valor null em runtime) e recusa a query
+// (HC0047, "maximum allowed field cost exceeded"). Um `where` com a estrutura fixa
+// na própria query (só a lista de estados vem por variável) calcula o custo real
+// e passa — mas exige uma query sem o campo `where` pro caso "sem filtro".
 const CHEAPEST_FUEL_PRICES = gql`
+	${FUEL_STATION_FIELDS}
 	query CheapestFuelPrices($product: FuelProduct!) {
 		cheapestFuelPrices(product: $product, first: 20) {
 			edges {
@@ -18,17 +42,25 @@ const CHEAPEST_FUEL_PRICES = gql`
 					salePrice
 					collectedOn
 					fuelStation {
-						name
-						brand
-						municipality
-						state
-						street
-						number
-						complement
-						neighborhood
-						postalCode {
-							value
-						}
+						...FuelStationFields
+					}
+				}
+			}
+		}
+	}
+`;
+
+const CHEAPEST_FUEL_PRICES_BY_STATE = gql`
+	${FUEL_STATION_FIELDS}
+	query CheapestFuelPricesByState($product: FuelProduct!, $states: [String!]) {
+		cheapestFuelPrices(product: $product, first: 20, where: { fuelStation: { state: { in: $states } } }) {
+			edges {
+				node {
+					id
+					salePrice
+					collectedOn
+					fuelStation {
+						...FuelStationFields
 					}
 				}
 			}
@@ -66,6 +98,36 @@ const FUEL_PRODUCTS = [
 ] as const;
 
 type FuelProductValue = (typeof FUEL_PRODUCTS)[number]["value"];
+
+const BRAZILIAN_STATES = [
+	{ code: "AC", name: "Acre" },
+	{ code: "AL", name: "Alagoas" },
+	{ code: "AP", name: "Amapá" },
+	{ code: "AM", name: "Amazonas" },
+	{ code: "BA", name: "Bahia" },
+	{ code: "CE", name: "Ceará" },
+	{ code: "DF", name: "Distrito Federal" },
+	{ code: "ES", name: "Espírito Santo" },
+	{ code: "GO", name: "Goiás" },
+	{ code: "MA", name: "Maranhão" },
+	{ code: "MT", name: "Mato Grosso" },
+	{ code: "MS", name: "Mato Grosso do Sul" },
+	{ code: "MG", name: "Minas Gerais" },
+	{ code: "PA", name: "Pará" },
+	{ code: "PB", name: "Paraíba" },
+	{ code: "PR", name: "Paraná" },
+	{ code: "PE", name: "Pernambuco" },
+	{ code: "PI", name: "Piauí" },
+	{ code: "RJ", name: "Rio de Janeiro" },
+	{ code: "RN", name: "Rio Grande do Norte" },
+	{ code: "RS", name: "Rio Grande do Sul" },
+	{ code: "RO", name: "Rondônia" },
+	{ code: "RR", name: "Roraima" },
+	{ code: "SC", name: "Santa Catarina" },
+	{ code: "SP", name: "São Paulo" },
+	{ code: "SE", name: "Sergipe" },
+	{ code: "TO", name: "Tocantins" },
+] as const;
 
 function toTitleCase(text: string): string {
 	return text
@@ -109,15 +171,40 @@ async function openInMaps(station: FuelPriceNode["fuelStation"]): Promise<void> 
 	await Linking.openURL(webUrl);
 }
 
+function regionChipLabel(selectedStates: string[]): string {
+	if (selectedStates.length === 0) {
+		return "Todos os estados";
+	}
+
+	if (selectedStates.length <= 2) {
+		return selectedStates.join(", ");
+	}
+
+	return `${selectedStates.length} estados`;
+}
+
 export default function CheapestFuelPricesScreen() {
 	const theme = useTheme();
 	const [product, setProduct] = useState<FuelProductValue>("GASOLINE");
 	const [selectedStation, setSelectedStation] = useState<FuelPriceNode | null>(null);
-	const { data, loading, error } = useQuery<CheapestFuelPricesData>(CHEAPEST_FUEL_PRICES, {
-		variables: { product },
-	});
+	const [selectedStates, setSelectedStates] = useState<string[]>([]);
+	const [regionModalVisible, setRegionModalVisible] = useState(false);
+
+	const hasStateFilter = selectedStates.length > 0;
+	const { data, loading, error } = useQuery<CheapestFuelPricesData>(
+		hasStateFilter ? CHEAPEST_FUEL_PRICES_BY_STATE : CHEAPEST_FUEL_PRICES,
+		{
+			variables: hasStateFilter ? { product, states: selectedStates } : { product },
+		},
+	);
 
 	const prices = data?.cheapestFuelPrices.edges.map((edge: { node: FuelPriceNode }) => edge.node) ?? [];
+
+	function toggleState(code: string) {
+		setSelectedStates((current) =>
+			current.includes(code) ? current.filter((item) => item !== code) : [...current, code],
+		);
+	}
 
 	return (
 		<ThemedView style={styles.container}>
@@ -139,17 +226,13 @@ export default function CheapestFuelPricesScreen() {
 				</View>
 
 				<View style={styles.chipRow}>
-					<View
-						style={[
-							styles.chip,
-							styles.staticChip,
-							{ backgroundColor: theme.backgroundElement, borderColor: theme.text },
-						]}
+					<HardShadowBox
+						offset={3}
+						onPress={() => setRegionModalVisible(true)}
+						style={[styles.chip, selectedStates.length > 0 && { backgroundColor: AccentColor }]}
 					>
-						<ThemedText type="small" themeColor="textSecondary">
-							São Paulo, SP
-						</ThemedText>
-					</View>
+						<ThemedText type="smallBold">{regionChipLabel(selectedStates)}</ThemedText>
+					</HardShadowBox>
 				</View>
 			</View>
 
@@ -202,75 +285,80 @@ export default function CheapestFuelPricesScreen() {
 				/>
 			)}
 
-			<Modal
+			<VintageWindowModal
 				visible={selectedStation !== null}
-				transparent
-				animationType="fade"
-				onRequestClose={() => setSelectedStation(null)}
+				onClose={() => setSelectedStation(null)}
+				title="Detalhes do posto"
 			>
-				<Pressable style={styles.modalBackdrop} onPress={() => setSelectedStation(null)}>
-					<Pressable onPress={(event) => event.stopPropagation()}>
-						<HardShadowBox offset={5} style={styles.windowShell}>
-							{selectedStation && (
-								<>
-									<View style={[styles.titleBar, { backgroundColor: CategoryColors.mustard, borderBottomColor: theme.text }]}>
-										<ThemedText
-											type="smallBold"
-											style={[styles.titleBarText, { color: theme.text }]}
-											numberOfLines={1}
-										>
-											Detalhes do posto
-										</ThemedText>
-										<Pressable
-											style={[
-												styles.titleBarCloseBox,
-												{ backgroundColor: CategoryColors.coral, borderColor: theme.text },
-											]}
-											onPress={() => setSelectedStation(null)}
-										>
-											<ThemedText style={[styles.titleBarCloseX, { color: theme.background }]}>✕</ThemedText>
-										</Pressable>
-									</View>
+				{selectedStation && (
+					<>
+						<ThemedText type="subtitle">{toTitleCase(selectedStation.fuelStation.name)}</ThemedText>
 
-									<View style={styles.windowContent}>
-										<ThemedText type="subtitle">{toTitleCase(selectedStation.fuelStation.name)}</ThemedText>
+						<View
+							style={[
+								styles.brandTag,
+								styles.modalBrandTag,
+								{ backgroundColor: CategoryColors.coral, borderColor: theme.text },
+							]}
+						>
+							<ThemedText style={styles.brandTagText} numberOfLines={1}>
+								{selectedStation.fuelStation.brand}
+							</ThemedText>
+						</View>
 
-										<View
-											style={[
-												styles.brandTag,
-												styles.modalBrandTag,
-												{ backgroundColor: CategoryColors.coral, borderColor: theme.text },
-											]}
-										>
-											<ThemedText style={styles.brandTagText} numberOfLines={1}>
-												{selectedStation.fuelStation.brand}
-											</ThemedText>
-										</View>
+						<ThemedText type="default" style={styles.modalAddress}>
+							{formatAddress(selectedStation.fuelStation) ?? "Endereço não informado"}
+						</ThemedText>
 
-										<ThemedText type="default" style={styles.modalAddress}>
-											{formatAddress(selectedStation.fuelStation) ?? "Endereço não informado"}
-										</ThemedText>
+						<ThemedText type="small" themeColor="textSecondary">
+							{selectedStation.fuelStation.municipality}/{selectedStation.fuelStation.state}
+						</ThemedText>
 
-										<ThemedText type="small" themeColor="textSecondary">
-											{selectedStation.fuelStation.municipality}/{selectedStation.fuelStation.state}
-										</ThemedText>
+						<View style={styles.mapsButtonRow}>
+							<HardShadowBox offset={3} style={styles.mapsButton} onPress={() => openInMaps(selectedStation.fuelStation)}>
+								<ThemedText type="smallBold">📍 Ver no mapa</ThemedText>
+							</HardShadowBox>
+						</View>
+					</>
+				)}
+			</VintageWindowModal>
 
-										<View style={styles.mapsButtonRow}>
-											<HardShadowBox
-												offset={3}
-												style={styles.mapsButton}
-												onPress={() => openInMaps(selectedStation.fuelStation)}
-											>
-												<ThemedText type="smallBold">📍 Ver no mapa</ThemedText>
-											</HardShadowBox>
-										</View>
-									</View>
-								</>
-							)}
-						</HardShadowBox>
-					</Pressable>
-				</Pressable>
-			</Modal>
+			<VintageWindowModal
+				visible={regionModalVisible}
+				onClose={() => setRegionModalVisible(false)}
+				title="Filtrar por estado"
+				titleBarColor={CategoryColors.blue}
+				contentStyle={styles.regionModalContent}
+			>
+				<View style={styles.regionGrid}>
+					{BRAZILIAN_STATES.map((state) => {
+						const active = selectedStates.includes(state.code);
+						return (
+							<HardShadowBox
+								key={state.code}
+								offset={2}
+								onPress={() => toggleState(state.code)}
+								style={[styles.stateChip, active && { backgroundColor: AccentColor }]}
+							>
+								<ThemedText type="smallBold">{state.code}</ThemedText>
+							</HardShadowBox>
+						);
+					})}
+				</View>
+
+				<View style={styles.mapsButtonRow}>
+					<HardShadowBox
+						offset={3}
+						style={[styles.mapsButton, selectedStates.length === 0 && styles.disabledButton]}
+						pressedStyle={{ backgroundColor: CategoryColors.coral }}
+						onPress={selectedStates.length > 0 ? () => setSelectedStates([]) : undefined}
+					>
+						<ThemedText type="smallBold" themeColor={selectedStates.length > 0 ? "text" : "textSecondary"}>
+							Limpar seleção
+						</ThemedText>
+					</HardShadowBox>
+				</View>
+			</VintageWindowModal>
 		</ThemedView>
 	);
 }
@@ -296,9 +384,6 @@ const styles = StyleSheet.create({
 	chip: {
 		paddingVertical: Spacing.one,
 		paddingHorizontal: Spacing.three,
-	},
-	staticChip: {
-		borderWidth: BorderWidth.medium,
 	},
 	list: {
 		paddingHorizontal: Spacing.four,
@@ -344,46 +429,6 @@ const styles = StyleSheet.create({
 	priceUnit: {
 		fontSize: 10,
 	},
-	modalBackdrop: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		padding: Spacing.five,
-		backgroundColor: "rgba(0, 0, 0, 0.5)",
-	},
-	windowShell: {
-		width: "100%",
-		maxWidth: 340,
-		padding: 0,
-		overflow: "hidden",
-	},
-	titleBar: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: Spacing.two,
-		paddingVertical: Spacing.two,
-		paddingHorizontal: Spacing.two,
-		borderBottomWidth: BorderWidth.thick,
-	},
-	titleBarCloseBox: {
-		width: 18,
-		height: 18,
-		justifyContent: "center",
-		alignItems: "center",
-		borderWidth: BorderWidth.thin,
-	},
-	titleBarCloseX: {
-		fontSize: 11,
-		lineHeight: 12,
-	},
-	titleBarText: {
-		flex: 1,
-	},
-	windowContent: {
-		padding: Spacing.four,
-		gap: Spacing.two,
-		minHeight: 210,
-	},
 	modalBrandTag: {
 		marginVertical: Spacing.half,
 	},
@@ -397,5 +442,23 @@ const styles = StyleSheet.create({
 	mapsButton: {
 		paddingVertical: Spacing.one,
 		paddingHorizontal: Spacing.three,
+	},
+	disabledButton: {
+		opacity: 0.4,
+	},
+	regionModalContent: {
+		minHeight: 0,
+	},
+	regionGrid: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "center",
+		gap: Spacing.two,
+	},
+	stateChip: {
+		width: 44,
+		alignItems: "center",
+		paddingVertical: Spacing.one,
+		paddingHorizontal: Spacing.two,
 	},
 });
