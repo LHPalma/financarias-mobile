@@ -31,13 +31,13 @@ export function HardShadowBox({ children, style, offset = 8, borderRadius = 0, o
 			<Card
 				onPress={onPress}
 				style={[
-					style,
 					{
 						borderWidth: BorderWidth.thick,
 						borderColor: theme.text,
 						backgroundColor: theme.backgroundElement,
 						borderRadius,
 					},
+					style,
 				]}
 			>
 				{children}
