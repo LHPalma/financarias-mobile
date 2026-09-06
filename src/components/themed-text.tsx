@@ -1,33 +1,46 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { forwardRef } from 'react';
+import { StyleSheet, Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
 
 import { Fonts, ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+export type ThemedTextType = 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary';
+
 export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary';
+  type?: ThemedTextType;
   themeColor?: ThemeColor;
 };
 
-export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
+type ThemeColorMap = Record<ThemeColor, string>;
+
+/** Resolve o estilo (fonte/tamanho/cor) de um `type`+`themeColor` do ThemedText — reaproveitado por
+ * componentes que não podem renderizar um <ThemedText> diretamente (ex.: MarqueeText, que precisa de um
+ * <Text> de uma lib de terceiros por baixo). */
+export function resolveThemedTextStyle(
+  theme: ThemeColorMap,
+  type: ThemedTextType = 'default',
+  themeColor?: ThemeColor,
+): StyleProp<TextStyle> {
+  return [
+    { color: theme[themeColor ?? 'text'] },
+    type === 'default' && styles.default,
+    type === 'title' && styles.title,
+    type === 'small' && styles.small,
+    type === 'smallBold' && styles.smallBold,
+    type === 'subtitle' && styles.subtitle,
+    type === 'link' && styles.link,
+    type === 'linkPrimary' && styles.linkPrimary,
+  ];
+}
+
+export const ThemedText = forwardRef<Text, ThemedTextProps>(function ThemedText(
+  { style, type = 'default', themeColor, ...rest },
+  ref,
+) {
   const theme = useTheme();
 
-  return (
-    <Text
-      style={[
-        { color: theme[themeColor ?? 'text'] },
-        type === 'default' && styles.default,
-        type === 'title' && styles.title,
-        type === 'small' && styles.small,
-        type === 'smallBold' && styles.smallBold,
-        type === 'subtitle' && styles.subtitle,
-        type === 'link' && styles.link,
-        type === 'linkPrimary' && styles.linkPrimary,
-        style,
-      ]}
-      {...rest}
-    />
-  );
-}
+  return <Text ref={ref} style={[resolveThemedTextStyle(theme, type, themeColor), style]} {...rest} />;
+});
 
 const styles = StyleSheet.create({
   small: {
