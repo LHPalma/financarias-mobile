@@ -5,6 +5,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { BottomTabInset, MaxContentWidth, Spacing } from "@/constants/theme";
 import { Link } from "expo-router";
+import { HardShadowBox } from "@/components/hard-shadow-box";
 import { useThemeOverride } from "@/hooks/theme-override";
 
 export default function HomeScreen() {
@@ -13,7 +14,9 @@ export default function HomeScreen() {
 	return (
 		<ThemedView style={styles.container}>
 			<SafeAreaView style={styles.safeArea}>
-				<ThemedText type="title">Finançarias</ThemedText>
+				<HardShadowBox offset={4} borderRadius={0} style={{ padding: Spacing.three }}>
+					<ThemedText type="title">Finançarias</ThemedText>
+				</HardShadowBox>
 
 				<Link href="/fuel" asChild>
 					<Pressable style={styles.button}>
