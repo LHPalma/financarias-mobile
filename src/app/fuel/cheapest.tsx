@@ -1,6 +1,6 @@
 import { gql, useQuery } from "@apollo/client";
 import { useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
 
 import { HardShadowBox } from "@/components/hard-shadow-box";
 import { MarqueeText } from "@/components/marquee-text";
@@ -22,6 +22,13 @@ const CHEAPEST_FUEL_PRICES = gql`
 						brand
 						municipality
 						state
+						street
+						number
+						complement
+						neighborhood
+						postalCode {
+							value
+						}
 					}
 				}
 			}
@@ -38,6 +45,11 @@ type FuelPriceNode = {
 		brand: string;
 		municipality: string;
 		state: string;
+		street: string | null;
+		number: string | null;
+		complement: string | null;
+		neighborhood: string | null;
+		postalCode: { value: string } | null;
 	};
 };
 
@@ -63,9 +75,22 @@ function toTitleCase(text: string): string {
 		.join(" ");
 }
 
+function formatAddress(station: FuelPriceNode["fuelStation"]): string | null {
+	const streetLine = [station.street, station.number].filter(Boolean).join(", ");
+	const parts = [streetLine, station.complement, station.neighborhood].filter(Boolean);
+
+	if (station.postalCode?.value) {
+		const cep = station.postalCode.value;
+		parts.push(`CEP ${cep.slice(0, 5)}-${cep.slice(5)}`);
+	}
+
+	return parts.length > 0 ? toTitleCase(parts.join(" - ")) : null;
+}
+
 export default function CheapestFuelPricesScreen() {
 	const theme = useTheme();
 	const [product, setProduct] = useState<FuelProductValue>("GASOLINE");
+	const [selectedStation, setSelectedStation] = useState<FuelPriceNode | null>(null);
 	const { data, loading, error } = useQuery<CheapestFuelPricesData>(CHEAPEST_FUEL_PRICES, {
 		variables: { product },
 	});
@@ -124,7 +149,10 @@ export default function CheapestFuelPricesScreen() {
 					keyExtractor={(item) => String(item.id)}
 					contentContainerStyle={styles.list}
 					renderItem={({ item }) => (
-						<View style={[styles.row, { borderBottomColor: theme.text }]}>
+						<Pressable
+							style={[styles.row, { borderBottomColor: theme.text }]}
+							onPress={() => setSelectedStation(item)}
+						>
 							<View style={styles.rowLeft}>
 								<MarqueeText type="smallBold" style={styles.stationName}>
 									{toTitleCase(item.fuelStation.name)}
@@ -147,10 +175,70 @@ export default function CheapestFuelPricesScreen() {
 									R$/L
 								</ThemedText>
 							</View>
-						</View>
+						</Pressable>
 					)}
 				/>
 			)}
+
+			<Modal
+				visible={selectedStation !== null}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setSelectedStation(null)}
+			>
+				<Pressable style={styles.modalBackdrop} onPress={() => setSelectedStation(null)}>
+					<Pressable onPress={(event) => event.stopPropagation()}>
+						<HardShadowBox offset={5} style={styles.windowShell}>
+							{selectedStation && (
+								<>
+									<View style={[styles.titleBar, { backgroundColor: CategoryColors.mustard, borderBottomColor: theme.text }]}>
+										<ThemedText
+											type="smallBold"
+											style={[styles.titleBarText, { color: theme.text }]}
+											numberOfLines={1}
+										>
+											Detalhes do posto
+										</ThemedText>
+										<Pressable
+											style={[
+												styles.titleBarCloseBox,
+												{ backgroundColor: CategoryColors.coral, borderColor: theme.text },
+											]}
+											onPress={() => setSelectedStation(null)}
+										>
+											<ThemedText style={[styles.titleBarCloseX, { color: theme.background }]}>✕</ThemedText>
+										</Pressable>
+									</View>
+
+									<View style={styles.windowContent}>
+										<ThemedText type="subtitle">{toTitleCase(selectedStation.fuelStation.name)}</ThemedText>
+
+										<View
+											style={[
+												styles.brandTag,
+												styles.modalBrandTag,
+												{ backgroundColor: CategoryColors.coral, borderColor: theme.text },
+											]}
+										>
+											<ThemedText style={styles.brandTagText} numberOfLines={1}>
+												{selectedStation.fuelStation.brand}
+											</ThemedText>
+										</View>
+
+										<ThemedText type="default" style={styles.modalAddress}>
+											{formatAddress(selectedStation.fuelStation) ?? "Endereço não informado"}
+										</ThemedText>
+
+										<ThemedText type="small" themeColor="textSecondary">
+											{selectedStation.fuelStation.municipality}/{selectedStation.fuelStation.state}
+										</ThemedText>
+									</View>
+								</>
+							)}
+						</HardShadowBox>
+					</Pressable>
+				</Pressable>
+			</Modal>
 		</ThemedView>
 	);
 }
@@ -223,5 +311,51 @@ const styles = StyleSheet.create({
 	},
 	priceUnit: {
 		fontSize: 10,
+	},
+	modalBackdrop: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		padding: Spacing.five,
+		backgroundColor: "rgba(0, 0, 0, 0.5)",
+	},
+	windowShell: {
+		width: "100%",
+		maxWidth: 340,
+		padding: 0,
+		overflow: "hidden",
+	},
+	titleBar: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: Spacing.two,
+		paddingVertical: Spacing.two,
+		paddingHorizontal: Spacing.two,
+		borderBottomWidth: BorderWidth.thick,
+	},
+	titleBarCloseBox: {
+		width: 18,
+		height: 18,
+		justifyContent: "center",
+		alignItems: "center",
+		borderWidth: BorderWidth.thin,
+	},
+	titleBarCloseX: {
+		fontSize: 11,
+		lineHeight: 12,
+	},
+	titleBarText: {
+		flex: 1,
+	},
+	windowContent: {
+		padding: Spacing.four,
+		gap: Spacing.two,
+		minHeight: 170,
+	},
+	modalBrandTag: {
+		marginVertical: Spacing.half,
+	},
+	modalAddress: {
+		marginTop: Spacing.two,
 	},
 });
