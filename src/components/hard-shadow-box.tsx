@@ -9,14 +9,24 @@ type HardShadowBoxProps = PropsWithChildren<{
 	offset?: number;
 	borderRadius?: number;
 	onPress?: () => void;
+	/** Aplica também no wrapper externo (que carrega a sombra) — passar alignSelf só em `style`
+	 * encolhe/move o conteúdo sem acompanhar a sombra, que fica presa ao tamanho do pai. */
+	alignSelf?: ViewStyle["alignSelf"];
 }>;
 
-export function HardShadowBox({ children, style, offset = 8, borderRadius = 0, onPress }: HardShadowBoxProps) {
+export function HardShadowBox({
+	children,
+	style,
+	offset = 8,
+	borderRadius = 0,
+	onPress,
+	alignSelf,
+}: HardShadowBoxProps) {
 	const theme = useTheme();
 	const Card = onPress ? Pressable : View;
 
 	return (
-		<View style={{ position: "relative", marginRight: offset, marginBottom: offset }}>
+		<View style={{ position: "relative", marginRight: offset, marginBottom: offset, alignSelf }}>
 			<View
 				style={{
 					position: "absolute",
