@@ -10,12 +10,12 @@ import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
+
+import { ThemeOverrideProvider, useThemeOverride } from "@/hooks/theme-override";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-	const colorScheme = useColorScheme();
 	const [fontsLoaded] = useFonts({
 		ArchivoBlack_400Regular,
 		Inter_400Regular,
@@ -34,6 +34,16 @@ export default function RootLayout() {
 	if (!fontsLoaded) {
 		return null;
 	}
+
+	return (
+		<ThemeOverrideProvider>
+			<RootLayoutNav />
+		</ThemeOverrideProvider>
+	);
+}
+
+function RootLayoutNav() {
+	const { colorScheme } = useThemeOverride();
 
 	return (
 		<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
