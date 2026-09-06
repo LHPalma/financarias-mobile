@@ -1,17 +1,19 @@
 import { PropsWithChildren } from "react";
-import { View, ViewStyle } from "react-native";
+import { Pressable, StyleProp, View, ViewStyle } from "react-native";
 
 import { BorderWidth } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
 type HardShadowBoxProps = PropsWithChildren<{
-	style?: ViewStyle;
+	style?: StyleProp<ViewStyle>;
 	offset?: number;
 	borderRadius?: number;
+	onPress?: () => void;
 }>;
 
-export function HardShadowBox({ children, style, offset = 8, borderRadius = 0 }: HardShadowBoxProps) {
+export function HardShadowBox({ children, style, offset = 8, borderRadius = 0, onPress }: HardShadowBoxProps) {
 	const theme = useTheme();
+	const Card = onPress ? Pressable : View;
 
 	return (
 		<View style={{ position: "relative", marginRight: offset, marginBottom: offset }}>
@@ -26,7 +28,8 @@ export function HardShadowBox({ children, style, offset = 8, borderRadius = 0 }:
 					borderRadius,
 				}}
 			/>
-			<View
+			<Card
+				onPress={onPress}
 				style={[
 					style,
 					{
@@ -38,7 +41,7 @@ export function HardShadowBox({ children, style, offset = 8, borderRadius = 0 }:
 				]}
 			>
 				{children}
-			</View>
+			</Card>
 		</View>
 	);
 }
