@@ -1,6 +1,6 @@
 import { gql, useQuery } from "@apollo/client";
 import { useState } from "react";
-import { FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, Linking, Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { HardShadowBox } from "@/components/hard-shadow-box";
 import { MarqueeText } from "@/components/marquee-text";
@@ -85,6 +85,28 @@ function formatAddress(station: FuelPriceNode["fuelStation"]): string | null {
 	}
 
 	return parts.length > 0 ? toTitleCase(parts.join(" - ")) : null;
+}
+
+function buildMapsQuery(station: FuelPriceNode["fuelStation"]): string {
+	const address = formatAddress(station);
+	const parts = [toTitleCase(station.name), address, `${station.municipality}/${station.state}`].filter(Boolean);
+	return parts.join(", ");
+}
+
+async function openInMaps(station: FuelPriceNode["fuelStation"]): Promise<void> {
+	const query = encodeURIComponent(buildMapsQuery(station));
+	const nativeUrl = Platform.select({
+		ios: `maps:0,0?q=${query}`,
+		android: `geo:0,0?q=${query}`,
+	});
+	const webUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+
+	if (nativeUrl && (await Linking.canOpenURL(nativeUrl))) {
+		await Linking.openURL(nativeUrl);
+		return;
+	}
+
+	await Linking.openURL(webUrl);
 }
 
 export default function CheapestFuelPricesScreen() {
@@ -232,6 +254,16 @@ export default function CheapestFuelPricesScreen() {
 										<ThemedText type="small" themeColor="textSecondary">
 											{selectedStation.fuelStation.municipality}/{selectedStation.fuelStation.state}
 										</ThemedText>
+
+										<View style={styles.mapsButtonRow}>
+											<HardShadowBox
+												offset={3}
+												style={styles.mapsButton}
+												onPress={() => openInMaps(selectedStation.fuelStation)}
+											>
+												<ThemedText type="smallBold">📍 Ver no mapa</ThemedText>
+											</HardShadowBox>
+										</View>
 									</View>
 								</>
 							)}
@@ -350,12 +382,20 @@ const styles = StyleSheet.create({
 	windowContent: {
 		padding: Spacing.four,
 		gap: Spacing.two,
-		minHeight: 170,
+		minHeight: 210,
 	},
 	modalBrandTag: {
 		marginVertical: Spacing.half,
 	},
 	modalAddress: {
 		marginTop: Spacing.two,
+	},
+	mapsButtonRow: {
+		flexDirection: "row",
+		marginTop: Spacing.three,
+	},
+	mapsButton: {
+		paddingVertical: Spacing.one,
+		paddingHorizontal: Spacing.three,
 	},
 });
