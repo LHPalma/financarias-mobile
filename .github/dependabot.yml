@@ -1,0 +1,40 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      # O SDK do Expo fixa versões compatíveis de react/react-dom/react-native e dos
+      # pacotes react-native-*/expo-* — atualizar um sem os outros quebra a combinação
+      # que o SDK certifica. Sobe tudo junto, numa PR só.
+      expo:
+        patterns:
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+          - "@expo-google-fonts/*"
+          - "react"
+          - "react-dom"
+          - "react-native"
+          - "react-native-*"
+
+  # Mantém actions/checkout e actions/setup-node atualizados.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Sao_Paulo
+    commit-message:
+      prefix: chore
+      include: scope
