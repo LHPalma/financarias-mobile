@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, type PropsWithChildren } from "react";
-import { useColorScheme as useSystemColorScheme } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
 
 type ColorScheme = "light" | "dark";
 
@@ -8,16 +8,32 @@ type ThemeOverrideContextValue = {
 	toggleColorScheme: () => void;
 };
 
+const STORAGE_KEY = "financarias:colorScheme";
+
 const ThemeOverrideContext = createContext<ThemeOverrideContextValue | null>(null);
 
 export function ThemeOverrideProvider({ children }: PropsWithChildren) {
-	const systemScheme = useSystemColorScheme();
-	const [override, setOverride] = useState<ColorScheme | null>(null);
+	// Padrão claro quando não há preferência salva — não segue o tema do sistema.
+	const [colorScheme, setColorScheme] = useState<ColorScheme>("light");
+	const [isLoaded, setIsLoaded] = useState(false);
 
-	const colorScheme: ColorScheme = override ?? (systemScheme === "dark" ? "dark" : "light");
+	useEffect(() => {
+		AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
+			if (stored === "light" || stored === "dark") {
+				setColorScheme(stored);
+			}
+			setIsLoaded(true);
+		});
+	}, []);
 
 	function toggleColorScheme() {
-		setOverride(colorScheme === "dark" ? "light" : "dark");
+		const next = colorScheme === "dark" ? "light" : "dark";
+		setColorScheme(next);
+		AsyncStorage.setItem(STORAGE_KEY, next);
+	}
+
+	if (!isLoaded) {
+		return null;
 	}
 
 	return (
