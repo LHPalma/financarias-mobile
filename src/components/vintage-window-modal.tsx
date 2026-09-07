@@ -31,8 +31,11 @@ export function VintageWindowModal({
 				style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
 				onPress={onClose}
 			>
-				<Pressable onPress={(event) => event.stopPropagation()}>
-					<HardShadowBox offset={5} className="w-full max-w-[340px] overflow-hidden p-0">
+				{/* A largura da janela fica aqui, num pai de largura definida, e não no HardShadowBox:
+				    o wrapper da sombra se dimensiona pelo conteúdo, então um Card com largura em %
+				    dependeria de um pai que depende dele. */}
+				<Pressable className="w-full max-w-[340px]" onPress={(event) => event.stopPropagation()}>
+					<HardShadowBox offset={5} className="overflow-hidden p-0">
 						<View
 							className="flex-row items-center gap-two border-b-thick p-two"
 							style={{ backgroundColor: titleBarColor, borderBottomColor: theme.text }}
