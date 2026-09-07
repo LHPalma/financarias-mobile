@@ -35,7 +35,13 @@ export function HardShadowBox({
 	const Card = (onPress ? Pressable : View) as typeof Pressable;
 
 	return (
-		<View className="relative" style={{ marginRight: offset, marginBottom: offset, alignSelf }}>
+		// minWidth/minHeight: 0 sobrescreve o "auto" padrão do flexbox/Yoga pra item de flex —
+		// sem isso, este wrapper (que só encolhe pelo conteúdo do Card, nunca por si) se recusa a
+		// encolher abaixo do tamanho intrínseco do conteúdo quando o Card usa w-full/flex-1 dentro
+		// de um pai com largura/altura já definida, e a sombra (absoluta, do tamanho do wrapper)
+		// estoura muito além do Card visível. Reproduzido tanto vertical (Limpar seleção dentro de
+		// um flex-row) quanto horizontal (VintageWindowModal com w-full max-w-[340px]) — mesma causa.
+		<View className="relative" style={{ marginRight: offset, marginBottom: offset, alignSelf, minWidth: 0, minHeight: 0 }}>
 			<View
 				className="absolute"
 				style={{
