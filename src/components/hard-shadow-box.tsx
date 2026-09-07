@@ -1,7 +1,9 @@
-import { PropsWithChildren, useState } from "react";
-import { Pressable, StyleProp, View, ViewStyle } from "react-native";
+import { PropsWithChildren, useCallback, useState } from "react";
+import { LayoutChangeEvent, Pressable, StyleProp, View, ViewStyle } from "react-native";
 
 import { useTheme } from "@/hooks/use-theme";
+
+type CardSize = { width: number; height: number };
 
 type HardShadowBoxProps = PropsWithChildren<{
 	className?: string;
@@ -29,32 +31,42 @@ export function HardShadowBox({
 }: HardShadowBoxProps) {
 	const theme = useTheme();
 	const [isPressed, setIsPressed] = useState(false);
+	const [cardSize, setCardSize] = useState<CardSize | null>(null);
 	// Cast pragmático: quando onPress não existe usamos View (sem overhead de toque), mas
 	// tipar Card como União View|Pressable trava onPressIn/onPressOut (View não os tem) mesmo
 	// quando passados como undefined nesse branch.
 	const Card = (onPress ? Pressable : View) as typeof Pressable;
 
+	const handleCardLayout = useCallback((event: LayoutChangeEvent) => {
+		const { width, height } = event.nativeEvent.layout;
+		setCardSize((current) =>
+			current && current.width === width && current.height === height ? current : { width, height },
+		);
+	}, []);
+
 	return (
-		// minWidth/minHeight: 0 sobrescreve o "auto" padrão do flexbox/Yoga pra item de flex —
-		// sem isso, este wrapper (que só encolhe pelo conteúdo do Card, nunca por si) se recusa a
-		// encolher abaixo do tamanho intrínseco do conteúdo quando o Card usa w-full/flex-1 dentro
-		// de um pai com largura/altura já definida, e a sombra (absoluta, do tamanho do wrapper)
-		// estoura muito além do Card visível. Reproduzido tanto vertical (Limpar seleção dentro de
-		// um flex-row) quanto horizontal (VintageWindowModal com w-full max-w-[340px]) — mesma causa.
-		<View className="relative" style={{ marginRight: offset, marginBottom: offset, alignSelf, minWidth: 0, minHeight: 0 }}>
-			<View
-				className="absolute"
-				style={{
-					top: offset,
-					left: offset,
-					right: -offset,
-					bottom: -offset,
-					backgroundColor: theme.text,
-					borderRadius,
-				}}
-			/>
+		<View style={{ marginRight: offset, marginBottom: offset, alignSelf }}>
+			{/* A sombra recebe largura/altura medidas do Card em vez de se dimensionar sozinha pelos
+			    insets (top/left/right/bottom) do wrapper: o wrapper é dimensionado pelo conteúdo, então
+			    quando o Card depende do wrapper pra própria largura (width em %) os dois são resolvidos
+			    em passadas diferentes do Yoga e podem divergir — a sombra saía com tamanho sem relação
+			    com o card. Medindo, ela é sempre exatamente a caixa do Card deslocada em `offset`. */}
+			{cardSize ? (
+				<View
+					className="absolute"
+					style={{
+						top: offset,
+						left: offset,
+						width: cardSize.width,
+						height: cardSize.height,
+						backgroundColor: theme.text,
+						borderRadius,
+					}}
+				/>
+			) : null}
 			<Card
 				className={className ? `border-thick ${className}` : "border-thick"}
+				onLayout={handleCardLayout}
 				onPress={onPress}
 				onPressIn={onPress ? () => setIsPressed(true) : undefined}
 				onPressOut={onPress ? () => setIsPressed(false) : undefined}
