@@ -1,9 +1,9 @@
 import { PropsWithChildren } from "react";
-import { Modal, Pressable, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { Modal, Pressable, StyleProp, View, ViewStyle } from "react-native";
 
 import { HardShadowBox } from "@/components/hard-shadow-box";
 import { ThemedText } from "@/components/themed-text";
-import { BorderWidth, CategoryColors, Spacing } from "@/constants/theme";
+import { CategoryColors } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
 type VintageWindowModalProps = PropsWithChildren<{
@@ -26,68 +26,35 @@ export function VintageWindowModal({
 
 	return (
 		<Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-			<Pressable style={styles.backdrop} onPress={onClose}>
+			<Pressable
+				className="flex-1 items-center justify-center p-five"
+				style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+				onPress={onClose}
+			>
 				<Pressable onPress={(event) => event.stopPropagation()}>
-					<HardShadowBox offset={5} style={styles.windowShell}>
-						<View style={[styles.titleBar, { backgroundColor: titleBarColor, borderBottomColor: theme.text }]}>
-							<ThemedText type="smallBold" style={[styles.titleBarText, { color: theme.text }]} numberOfLines={1}>
+					<HardShadowBox offset={5} className="w-full max-w-[340px] overflow-hidden p-0">
+						<View
+							className="flex-row items-center gap-two border-b-thick p-two"
+							style={{ backgroundColor: titleBarColor, borderBottomColor: theme.text }}
+						>
+							<ThemedText type="smallBold" className="flex-1" style={{ color: theme.text }} numberOfLines={1}>
 								{title}
 							</ThemedText>
 							<Pressable
-								style={[styles.closeBox, { backgroundColor: CategoryColors.coral, borderColor: theme.text }]}
+								className="h-[18px] w-[18px] items-center justify-center border-thin"
+								style={{ backgroundColor: CategoryColors.coral, borderColor: theme.text }}
 								onPress={onClose}
 							>
-								<ThemedText style={[styles.closeX, { color: theme.background }]}>✕</ThemedText>
+								<ThemedText style={{ fontSize: 11, lineHeight: 12, color: theme.background }}>✕</ThemedText>
 							</Pressable>
 						</View>
 
-						<View style={[styles.content, contentStyle]}>{children}</View>
+						<View className="min-h-[210px] gap-two p-four" style={contentStyle}>
+							{children}
+						</View>
 					</HardShadowBox>
 				</Pressable>
 			</Pressable>
 		</Modal>
 	);
 }
-
-const styles = StyleSheet.create({
-	backdrop: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		padding: Spacing.five,
-		backgroundColor: "rgba(0, 0, 0, 0.5)",
-	},
-	windowShell: {
-		width: "100%",
-		maxWidth: 340,
-		padding: 0,
-		overflow: "hidden",
-	},
-	titleBar: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: Spacing.two,
-		paddingVertical: Spacing.two,
-		paddingHorizontal: Spacing.two,
-		borderBottomWidth: BorderWidth.thick,
-	},
-	titleBarText: {
-		flex: 1,
-	},
-	closeBox: {
-		width: 18,
-		height: 18,
-		justifyContent: "center",
-		alignItems: "center",
-		borderWidth: BorderWidth.thin,
-	},
-	closeX: {
-		fontSize: 11,
-		lineHeight: 12,
-	},
-	content: {
-		padding: Spacing.four,
-		gap: Spacing.two,
-		minHeight: 210,
-	},
-});

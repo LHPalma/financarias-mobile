@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
-import { StyleSheet, Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
+import { Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
 
-import { Fonts, ThemeColor } from '@/constants/theme';
+import { ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ThemedTextType = 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary';
@@ -13,72 +13,49 @@ export type ThemedTextProps = TextProps & {
 
 type ThemeColorMap = Record<ThemeColor, string>;
 
-/** Resolve o estilo (fonte/tamanho/cor) de um `type`+`themeColor` do ThemedText — reaproveitado por
- * componentes que não podem renderizar um <ThemedText> diretamente (ex.: MarqueeText, que precisa de um
- * <Text> de uma lib de terceiros por baixo). */
+const LINK_PRIMARY_COLOR = '#3c87f7';
+
+// Título/número em destaque em Archivo Black (font-display) — o traço visual central do
+// brutalismo, sem tentar sintetizar outro peso: o arquivo já é a única variação que existe.
+const TYPE_CLASSNAMES: Record<ThemedTextType, string> = {
+  default: 'font-inter-medium text-[16px] leading-[24px]',
+  title: 'font-display text-[40px] leading-[44px]',
+  small: 'font-inter-medium text-[14px] leading-[20px]',
+  smallBold: 'font-inter-bold text-[14px] leading-[20px]',
+  subtitle: 'font-inter-bold text-[22px] leading-[28px]',
+  link: 'font-inter-semibold text-[14px] leading-[30px]',
+  linkPrimary: 'font-inter-semibold text-[14px] leading-[30px]',
+};
+
+/** Tipografia (família/tamanho/altura de linha) de um `type` do ThemedText, como className —
+ * reaproveitada por componentes que não podem renderizar um <ThemedText> diretamente (ex.:
+ * MarqueeText, que precisa de um <Text> de uma lib de terceiros por baixo). */
+export function themedTextClassName(type: ThemedTextType = 'default', className?: string): string {
+  return className ? `${TYPE_CLASSNAMES[type]} ${className}` : TYPE_CLASSNAMES[type];
+}
+
+/** Resolve a cor de um `type`+`themeColor` do ThemedText. Só a cor: ela continua vindo do JS
+ * (`useTheme()`), enquanto a tipografia mora em `themedTextClassName`. */
 export function resolveThemedTextStyle(
   theme: ThemeColorMap,
   type: ThemedTextType = 'default',
   themeColor?: ThemeColor,
 ): StyleProp<TextStyle> {
-  return [
-    { color: theme[themeColor ?? 'text'] },
-    type === 'default' && styles.default,
-    type === 'title' && styles.title,
-    type === 'small' && styles.small,
-    type === 'smallBold' && styles.smallBold,
-    type === 'subtitle' && styles.subtitle,
-    type === 'link' && styles.link,
-    type === 'linkPrimary' && styles.linkPrimary,
-  ];
+  return { color: type === 'linkPrimary' ? LINK_PRIMARY_COLOR : theme[themeColor ?? 'text'] };
 }
 
 export const ThemedText = forwardRef<Text, ThemedTextProps>(function ThemedText(
-  { style, type = 'default', themeColor, ...rest },
+  { className, style, type = 'default', themeColor, ...rest },
   ref,
 ) {
   const theme = useTheme();
 
-  return <Text ref={ref} style={[resolveThemedTextStyle(theme, type, themeColor), style]} {...rest} />;
-});
-
-const styles = StyleSheet.create({
-  small: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  smallBold: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  default: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  // Título/número em destaque — o traço visual central do brutalismo (Archivo Black,
-  // sem tentar sintetizar outro peso: o arquivo já é a única variação que existe).
-  title: {
-    fontFamily: Fonts.display,
-    fontSize: 40,
-    lineHeight: 44,
-  },
-  subtitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 22,
-    lineHeight: 28,
-  },
-  link: {
-    fontFamily: 'Inter_600SemiBold',
-    lineHeight: 30,
-    fontSize: 14,
-  },
-  linkPrimary: {
-    fontFamily: 'Inter_600SemiBold',
-    lineHeight: 30,
-    fontSize: 14,
-    color: '#3c87f7',
-  },
+  return (
+    <Text
+      ref={ref}
+      className={themedTextClassName(type, className)}
+      style={[resolveThemedTextStyle(theme, type, themeColor), style]}
+      {...rest}
+    />
+  );
 });

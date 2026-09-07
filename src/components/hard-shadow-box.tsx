@@ -1,10 +1,10 @@
 import { PropsWithChildren, useState } from "react";
 import { Pressable, StyleProp, View, ViewStyle } from "react-native";
 
-import { BorderWidth } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
 type HardShadowBoxProps = PropsWithChildren<{
+	className?: string;
 	style?: StyleProp<ViewStyle>;
 	offset?: number;
 	borderRadius?: number;
@@ -19,6 +19,7 @@ type HardShadowBoxProps = PropsWithChildren<{
 
 export function HardShadowBox({
 	children,
+	className,
 	style,
 	offset = 8,
 	borderRadius = 0,
@@ -34,10 +35,10 @@ export function HardShadowBox({
 	const Card = (onPress ? Pressable : View) as typeof Pressable;
 
 	return (
-		<View style={{ position: "relative", marginRight: offset, marginBottom: offset, alignSelf }}>
+		<View className="relative" style={{ marginRight: offset, marginBottom: offset, alignSelf }}>
 			<View
+				className="absolute"
 				style={{
-					position: "absolute",
 					top: offset,
 					left: offset,
 					right: -offset,
@@ -47,12 +48,12 @@ export function HardShadowBox({
 				}}
 			/>
 			<Card
+				className={className ? `border-thick ${className}` : "border-thick"}
 				onPress={onPress}
 				onPressIn={onPress ? () => setIsPressed(true) : undefined}
 				onPressOut={onPress ? () => setIsPressed(false) : undefined}
 				style={[
 					{
-						borderWidth: BorderWidth.thick,
 						borderColor: theme.text,
 						backgroundColor: theme.backgroundElement,
 						borderRadius,
