@@ -1,10 +1,10 @@
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { Link } from "expo-router";
 
 import { HardShadowBox } from "@/components/hard-shadow-box";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { CategoryColors, Spacing } from "@/constants/theme";
+import { CategoryColors } from "@/constants/theme";
 
 const TOOLS = [
 	{
@@ -43,19 +43,21 @@ const TOOLS = [
 
 export default function FuelHubScreen() {
 	return (
-		<ThemedView style={styles.container}>
-			<ThemedText type="title" style={styles.header}>Combustíveis</ThemedText>
+		<ThemedView className="flex-1 gap-three p-four">
+			<ThemedText type="title" className="mb-two">
+				Combustíveis
+			</ThemedText>
 
 			{TOOLS.map((tool) => (
 				<Link key={tool.href} href={tool.href} asChild>
-					<HardShadowBox offset={4} style={styles.row}>
-						<View style={[styles.iconBox, { backgroundColor: tool.color }]}>
+					<HardShadowBox offset={4} className="flex-row items-center gap-three p-three">
+						<View className="h-[44px] w-[44px] items-center justify-center" style={{ backgroundColor: tool.color }}>
 							<ThemedText type="subtitle" style={{ color: tool.iconColor }}>
 								{tool.icon}
 							</ThemedText>
 						</View>
 
-						<View style={styles.textColumn}>
+						<View className="flex-1 gap-half">
 							<ThemedText type="subtitle">{tool.title}</ThemedText>
 							<ThemedText type="small" themeColor="textSecondary">
 								{tool.subtitle}
@@ -71,30 +73,3 @@ export default function FuelHubScreen() {
 		</ThemedView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		padding: Spacing.four,
-		gap: Spacing.three,
-	},
-	header: {
-		marginBottom: Spacing.two,
-	},
-	row: {
-		flexDirection: "row",
-		alignItems: "center",
-		padding: Spacing.three,
-		gap: Spacing.three,
-	},
-	iconBox: {
-		width: 44,
-		height: 44,
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	textColumn: {
-		flex: 1,
-		gap: Spacing.half,
-	},
-});

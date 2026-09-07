@@ -1,3 +1,5 @@
+import "@/global.css";
+
 import { ApolloProvider } from "@apollo/client";
 import { ArchivoBlack_400Regular } from "@expo-google-fonts/archivo-black";
 import {

@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
@@ -12,19 +12,22 @@ export default function HomeScreen() {
 	const { colorScheme, toggleColorScheme } = useThemeOverride();
 
 	return (
-		<ThemedView style={styles.container}>
-			<SafeAreaView style={styles.safeArea}>
-				<HardShadowBox offset={4} borderRadius={0} style={{ padding: Spacing.three }}>
+		<ThemedView className="flex-1 flex-row justify-center">
+			<SafeAreaView
+				className="flex-1 items-center justify-center px-four"
+				style={{ paddingBottom: BottomTabInset + Spacing.three, maxWidth: MaxContentWidth }}
+			>
+				<HardShadowBox offset={4} borderRadius={0} className="p-three">
 					<ThemedText type="title">Finançarias</ThemedText>
 				</HardShadowBox>
 
 				<Link href="/fuel" asChild>
-					<Pressable style={styles.button}>
+					<Pressable className="mt-four">
 						<ThemedText type="link">Ir para Combustíveis</ThemedText>
 					</Pressable>
 				</Link>
 
-				<Pressable style={styles.button} onPress={toggleColorScheme}>
+				<Pressable className="mt-four" onPress={toggleColorScheme}>
 					<ThemedText type="link">
 						Tema: {colorScheme === "dark" ? "escuro" : "claro"} (trocar)
 					</ThemedText>
@@ -33,22 +36,3 @@ export default function HomeScreen() {
 		</ThemedView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		justifyContent: "center",
-		flexDirection: "row",
-	},
-	safeArea: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		paddingHorizontal: Spacing.four,
-		paddingBottom: BottomTabInset + Spacing.three,
-		maxWidth: MaxContentWidth,
-	},
-	button: {
-		marginTop: Spacing.four,
-	},
-});

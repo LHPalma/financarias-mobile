@@ -1,20 +1,10 @@
-import { StyleSheet } from "react-native";
-
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 
 export default function RegionRankingScreen() {
 	return (
-		<ThemedView style={styles.container}>
+		<ThemedView className="flex-1 items-center justify-center">
 			<ThemedText type="title">Ranking por região</ThemedText>
 		</ThemedView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-	},
-});

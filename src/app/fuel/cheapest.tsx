@@ -1,13 +1,13 @@
 import { gql, useQuery } from "@apollo/client";
 import { useState } from "react";
-import { FlatList, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, Linking, Platform, Pressable, View } from "react-native";
 
 import { HardShadowBox } from "@/components/hard-shadow-box";
 import { MarqueeText } from "@/components/marquee-text";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { VintageWindowModal } from "@/components/vintage-window-modal";
-import { AccentColor, BorderWidth, CategoryColors, Spacing } from "@/constants/theme";
+import { AccentColor, CategoryColors } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
 const FUEL_STATION_FIELDS = gql`
@@ -183,6 +183,18 @@ function regionChipLabel(selectedStates: string[]): string {
 	return `${selectedStates.length} estados`;
 }
 
+// Ajustes que sobrescrevem o `type` do ThemedText ficam em `style`, não em className: duas
+// utilitárias de font-size na mesma className seriam desempatadas pela ordem da folha gerada,
+// não pela ordem escrita — enquanto `style` inline vence className por especificidade.
+const textOverrides = {
+	stationName: { fontSize: 13 },
+	brandTagText: { fontSize: 10, color: "#FFFFFF" },
+	address: { fontSize: 10 },
+	price: { fontSize: 18, lineHeight: 20 },
+	priceUnit: { fontSize: 10 },
+	regionModalContent: { minHeight: 0 },
+} as const;
+
 export default function CheapestFuelPricesScreen() {
 	const theme = useTheme();
 	const [product, setProduct] = useState<FuelProductValue>("GASOLINE");
@@ -207,9 +219,9 @@ export default function CheapestFuelPricesScreen() {
 	}
 
 	return (
-		<ThemedView style={styles.container}>
-			<View style={styles.filters}>
-				<View style={styles.chipRow}>
+		<ThemedView className="flex-1">
+			<View className="gap-two p-four">
+				<View className="flex-row flex-wrap gap-two">
 					{FUEL_PRODUCTS.map((item) => {
 						const active = item.value === product;
 						return (
@@ -217,7 +229,8 @@ export default function CheapestFuelPricesScreen() {
 								key={item.value}
 								offset={3}
 								onPress={() => setProduct(item.value)}
-								style={[styles.chip, active && { backgroundColor: AccentColor }]}
+								className="px-three py-one"
+								style={active ? { backgroundColor: AccentColor } : undefined}
 							>
 								<ThemedText type="smallBold">{item.label}</ThemedText>
 							</HardShadowBox>
@@ -225,11 +238,12 @@ export default function CheapestFuelPricesScreen() {
 					})}
 				</View>
 
-				<View style={styles.chipRow}>
+				<View className="flex-row flex-wrap gap-two">
 					<HardShadowBox
 						offset={3}
 						onPress={() => setRegionModalVisible(true)}
-						style={[styles.chip, selectedStates.length > 0 && { backgroundColor: AccentColor }]}
+						className="px-three py-one"
+						style={selectedStates.length > 0 ? { backgroundColor: AccentColor } : undefined}
 					>
 						<ThemedText type="smallBold">{regionChipLabel(selectedStates)}</ThemedText>
 					</HardShadowBox>
@@ -237,13 +251,13 @@ export default function CheapestFuelPricesScreen() {
 			</View>
 
 			{loading && (
-				<ThemedView style={styles.centered}>
+				<ThemedView className="flex-1 items-center justify-center">
 					<ThemedText type="default">Carregando…</ThemedText>
 				</ThemedView>
 			)}
 
 			{error && (
-				<ThemedView style={styles.centered}>
+				<ThemedView className="flex-1 items-center justify-center">
 					<ThemedText type="default">Erro ao carregar: {error.message}</ThemedText>
 				</ThemedView>
 			)}
@@ -252,31 +266,35 @@ export default function CheapestFuelPricesScreen() {
 				<FlatList
 					data={prices}
 					keyExtractor={(item) => String(item.id)}
-					contentContainerStyle={styles.list}
+					contentContainerClassName="px-four"
 					renderItem={({ item }) => (
 						<Pressable
-							style={[styles.row, { borderBottomColor: theme.text }]}
+							className="flex-row items-start justify-between gap-two border-b-medium py-three"
+							style={{ borderBottomColor: theme.text }}
 							onPress={() => setSelectedStation(item)}
 						>
-							<View style={styles.rowLeft}>
-								<MarqueeText type="smallBold" style={styles.stationName}>
+							<View className="flex-1 gap-half">
+								<MarqueeText type="smallBold" style={textOverrides.stationName}>
 									{toTitleCase(item.fuelStation.name)}
 								</MarqueeText>
-								<View style={[styles.brandTag, { backgroundColor: CategoryColors.coral, borderColor: theme.text }]}>
-									<ThemedText style={styles.brandTagText} numberOfLines={1}>
+								<View
+									className="min-w-[76px] items-center self-start border-thin px-two py-half"
+									style={{ backgroundColor: CategoryColors.coral, borderColor: theme.text }}
+								>
+									<ThemedText className="text-center" style={textOverrides.brandTagText} numberOfLines={1}>
 										{item.fuelStation.brand}
 									</ThemedText>
 								</View>
-								<ThemedText type="small" themeColor="textSecondary" style={styles.address}>
+								<ThemedText type="small" themeColor="textSecondary" style={textOverrides.address}>
 									{item.fuelStation.municipality}/{item.fuelStation.state}
 								</ThemedText>
 							</View>
 
-							<View style={styles.rowRight}>
-								<ThemedText type="title" style={styles.price}>
+							<View className="items-end">
+								<ThemedText type="title" style={textOverrides.price}>
 									R$ {item.salePrice.toFixed(2)}
 								</ThemedText>
-								<ThemedText type="small" themeColor="textSecondary" style={styles.priceUnit}>
+								<ThemedText type="small" themeColor="textSecondary" style={textOverrides.priceUnit}>
 									R$/L
 								</ThemedText>
 							</View>
@@ -295,18 +313,15 @@ export default function CheapestFuelPricesScreen() {
 						<ThemedText type="subtitle">{toTitleCase(selectedStation.fuelStation.name)}</ThemedText>
 
 						<View
-							style={[
-								styles.brandTag,
-								styles.modalBrandTag,
-								{ backgroundColor: CategoryColors.coral, borderColor: theme.text },
-							]}
+							className="my-half min-w-[76px] items-center self-start border-thin px-two py-half"
+							style={{ backgroundColor: CategoryColors.coral, borderColor: theme.text }}
 						>
-							<ThemedText style={styles.brandTagText} numberOfLines={1}>
+							<ThemedText className="text-center" style={textOverrides.brandTagText} numberOfLines={1}>
 								{selectedStation.fuelStation.brand}
 							</ThemedText>
 						</View>
 
-						<ThemedText type="default" style={styles.modalAddress}>
+						<ThemedText type="default" className="mt-two">
 							{formatAddress(selectedStation.fuelStation) ?? "Endereço não informado"}
 						</ThemedText>
 
@@ -314,8 +329,12 @@ export default function CheapestFuelPricesScreen() {
 							{selectedStation.fuelStation.municipality}/{selectedStation.fuelStation.state}
 						</ThemedText>
 
-						<View style={styles.mapsButtonRow}>
-							<HardShadowBox offset={3} style={styles.mapsButton} onPress={() => openInMaps(selectedStation.fuelStation)}>
+						<View className="mt-three flex-row">
+							<HardShadowBox
+								offset={3}
+								className="px-three py-one"
+								onPress={() => openInMaps(selectedStation.fuelStation)}
+							>
 								<ThemedText type="smallBold">📍 Ver no mapa</ThemedText>
 							</HardShadowBox>
 						</View>
@@ -328,9 +347,9 @@ export default function CheapestFuelPricesScreen() {
 				onClose={() => setRegionModalVisible(false)}
 				title="Filtrar por estado"
 				titleBarColor={CategoryColors.blue}
-				contentStyle={styles.regionModalContent}
+				contentStyle={textOverrides.regionModalContent}
 			>
-				<View style={styles.regionGrid}>
+				<View className="flex-row flex-wrap justify-center gap-two">
 					{BRAZILIAN_STATES.map((state) => {
 						const active = selectedStates.includes(state.code);
 						return (
@@ -338,7 +357,8 @@ export default function CheapestFuelPricesScreen() {
 								key={state.code}
 								offset={2}
 								onPress={() => toggleState(state.code)}
-								style={[styles.stateChip, active && { backgroundColor: AccentColor }]}
+								className="w-[44px] items-center px-two py-one"
+								style={active ? { backgroundColor: AccentColor } : undefined}
 							>
 								<ThemedText type="smallBold">{state.code}</ThemedText>
 							</HardShadowBox>
@@ -346,10 +366,10 @@ export default function CheapestFuelPricesScreen() {
 					})}
 				</View>
 
-				<View style={styles.mapsButtonRow}>
+				<View className="mt-three flex-row">
 					<HardShadowBox
 						offset={3}
-						style={[styles.mapsButton, selectedStates.length === 0 && styles.disabledButton]}
+						className={selectedStates.length === 0 ? "px-three py-one opacity-40" : "px-three py-one"}
 						pressedStyle={{ backgroundColor: CategoryColors.coral }}
 						onPress={selectedStates.length > 0 ? () => setSelectedStates([]) : undefined}
 					>
@@ -362,103 +382,3 @@ export default function CheapestFuelPricesScreen() {
 		</ThemedView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
-	centered: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	filters: {
-		padding: Spacing.four,
-		gap: Spacing.two,
-	},
-	chipRow: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: Spacing.two,
-	},
-	chip: {
-		paddingVertical: Spacing.one,
-		paddingHorizontal: Spacing.three,
-	},
-	list: {
-		paddingHorizontal: Spacing.four,
-	},
-	row: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "flex-start",
-		paddingVertical: Spacing.three,
-		borderBottomWidth: BorderWidth.medium,
-		gap: Spacing.two,
-	},
-	rowLeft: {
-		flex: 1,
-		gap: Spacing.half,
-	},
-	stationName: {
-		fontSize: 13,
-	},
-	brandTag: {
-		alignSelf: "flex-start",
-		minWidth: 76,
-		alignItems: "center",
-		paddingVertical: 2,
-		paddingHorizontal: Spacing.two,
-		borderWidth: BorderWidth.thin,
-	},
-	brandTagText: {
-		fontSize: 10,
-		textAlign: "center",
-		color: "#FFFFFF",
-	},
-	address: {
-		fontSize: 10,
-	},
-	rowRight: {
-		alignItems: "flex-end",
-	},
-	price: {
-		fontSize: 18,
-		lineHeight: 20,
-	},
-	priceUnit: {
-		fontSize: 10,
-	},
-	modalBrandTag: {
-		marginVertical: Spacing.half,
-	},
-	modalAddress: {
-		marginTop: Spacing.two,
-	},
-	mapsButtonRow: {
-		flexDirection: "row",
-		marginTop: Spacing.three,
-	},
-	mapsButton: {
-		paddingVertical: Spacing.one,
-		paddingHorizontal: Spacing.three,
-	},
-	disabledButton: {
-		opacity: 0.4,
-	},
-	regionModalContent: {
-		minHeight: 0,
-	},
-	regionGrid: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		justifyContent: "center",
-		gap: Spacing.two,
-	},
-	stateChip: {
-		width: 44,
-		alignItems: "center",
-		paddingVertical: Spacing.one,
-		paddingHorizontal: Spacing.two,
-	},
-});
