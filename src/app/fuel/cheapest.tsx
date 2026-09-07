@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client";
 import { useState } from "react";
-import { FlatList, Linking, Platform, Pressable, View } from "react-native";
+import { FlatList, Pressable, View } from "react-native";
 
 import { HardShadowBox } from "@/components/hard-shadow-box";
 import { MarqueeText } from "@/components/marquee-text";
@@ -11,6 +11,8 @@ import { AccentColor, CategoryColors } from "@/constants/theme";
 import { CheapestFuelPricesByStateDocument, CheapestFuelPricesDocument } from "@/generated/graphql";
 import type { CheapestFuelPricesQuery } from "@/generated/graphql";
 import { useTheme } from "@/hooks/use-theme";
+import { openInMaps } from "@/lib/open-in-maps";
+import { toTitleCase } from "@/lib/text";
 
 // Duas queries (não $where opcional, que estoura custo HC0047 mesmo com null) — geradas de cheapest.graphql via `npm run codegen`, não editar graphql.ts na mão.
 
@@ -56,14 +58,6 @@ const BRAZILIAN_STATES = [
 	{ code: "TO", name: "Tocantins" },
 ] as const;
 
-function toTitleCase(text: string): string {
-	return text
-		.toLowerCase()
-		.split(" ")
-		.map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word))
-		.join(" ");
-}
-
 function formatAddress(station: FuelPriceNode["fuelStation"]): string | null {
 	const streetLine = [station.street, station.number].filter(Boolean).join(", ");
 	const parts = [streetLine, station.complement, station.neighborhood].filter(Boolean);
@@ -74,28 +68,6 @@ function formatAddress(station: FuelPriceNode["fuelStation"]): string | null {
 	}
 
 	return parts.length > 0 ? toTitleCase(parts.join(" - ")) : null;
-}
-
-function buildMapsQuery(station: FuelPriceNode["fuelStation"]): string {
-	const address = formatAddress(station);
-	const parts = [toTitleCase(station.name), address, `${station.municipality}/${station.state}`].filter(Boolean);
-	return parts.join(", ");
-}
-
-async function openInMaps(station: FuelPriceNode["fuelStation"]): Promise<void> {
-	const query = encodeURIComponent(buildMapsQuery(station));
-	const nativeUrl = Platform.select({
-		ios: `maps:0,0?q=${query}`,
-		android: `geo:0,0?q=${query}`,
-	});
-	const webUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-
-	if (nativeUrl && (await Linking.canOpenURL(nativeUrl))) {
-		await Linking.openURL(nativeUrl);
-		return;
-	}
-
-	await Linking.openURL(webUrl);
 }
 
 function regionChipLabel(selectedStates: string[]): string {
@@ -262,7 +234,14 @@ export default function CheapestFuelPricesScreen() {
 							<HardShadowBox
 								offset={3}
 								className="px-three py-one"
-								onPress={() => openInMaps(selectedStation.fuelStation)}
+								onPress={() =>
+									openInMaps({
+										name: selectedStation.fuelStation.name,
+										municipality: selectedStation.fuelStation.municipality,
+										state: selectedStation.fuelStation.state,
+										address: formatAddress(selectedStation.fuelStation),
+									})
+								}
 							>
 								<ThemedText type="smallBold">📍 Ver no mapa</ThemedText>
 							</HardShadowBox>
