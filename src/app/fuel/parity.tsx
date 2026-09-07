@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client";
 import { useState } from "react";
-import { FlatList, View } from "react-native";
+import { FlatList, Pressable, View } from "react-native";
 
 import { HardShadowBox } from "@/components/hard-shadow-box";
 import { MarqueeText } from "@/components/marquee-text";
@@ -12,6 +12,8 @@ import { EthanolGasolineParityByStateDocument } from "@/generated/graphql";
 import type { EthanolGasolineParityByStateQuery } from "@/generated/graphql";
 import { useDetectedState } from "@/hooks/use-detected-state";
 import { useTheme } from "@/hooks/use-theme";
+import { openInMaps } from "@/lib/open-in-maps";
+import { toTitleCase } from "@/lib/text";
 
 type ParityNode = NonNullable<
 	NonNullable<EthanolGasolineParityByStateQuery["ethanolGasolineParity"]>["edges"]
@@ -47,14 +49,6 @@ const BRAZILIAN_STATES = [
 	{ code: "TO", name: "Tocantins" },
 ] as const;
 
-function toTitleCase(text: string): string {
-	return text
-		.toLowerCase()
-		.split(" ")
-		.map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word))
-		.join(" ");
-}
-
 // style, não className: mesma regra de cheapest.tsx — duas classes de font-size na
 // mesma string empatam pela ordem da folha gerada, não pela ordem escrita.
 const textOverrides = {
@@ -64,6 +58,7 @@ const textOverrides = {
 	price: { fontSize: 14, lineHeight: 17 },
 	priceUnit: { fontSize: 9 },
 	stateModalContent: { minHeight: 0 },
+	stationModalContent: { minHeight: 0 },
 } as const;
 
 export default function EthanolGasolineParityScreen() {
@@ -71,6 +66,7 @@ export default function EthanolGasolineParityScreen() {
 	// null = usuário não escolheu manualmente ainda; nesse caso `detectedState` decide.
 	const [manualState, setManualState] = useState<string | null>(null);
 	const [stateModalVisible, setStateModalVisible] = useState(false);
+	const [selectedStation, setSelectedStation] = useState<ParityNode | null>(null);
 	const { detectedState, detecting: detectingLocation } = useDetectedState(BRAZILIAN_STATES);
 	const selectedState = manualState ?? detectedState;
 
@@ -129,7 +125,11 @@ export default function EthanolGasolineParityScreen() {
 						</ThemedText>
 					}
 					renderItem={({ item }) => (
-						<View className="flex-row items-start justify-between gap-two border-b-medium py-three" style={{ borderBottomColor: theme.text }}>
+						<Pressable
+							className="flex-row items-start justify-between gap-two border-b-medium py-three"
+							style={{ borderBottomColor: theme.text }}
+							onPress={() => setSelectedStation(item)}
+						>
 							<View className="flex-1 gap-half">
 								<MarqueeText type="smallBold" style={textOverrides.stationName}>
 									{toTitleCase(item.stationName)}
@@ -166,10 +166,71 @@ export default function EthanolGasolineParityScreen() {
 									razão {item.ratio.toFixed(2)}
 								</ThemedText>
 							</View>
-						</View>
+						</Pressable>
 					)}
 				/>
 			)}
+
+			<VintageWindowModal
+				visible={selectedStation !== null}
+				onClose={() => setSelectedStation(null)}
+				title="Detalhes do posto"
+				contentStyle={textOverrides.stationModalContent}
+			>
+				{selectedStation && (
+					<>
+						<ThemedText type="subtitle">{toTitleCase(selectedStation.stationName)}</ThemedText>
+
+						<View
+							className="my-half min-w-[76px] items-center self-start border-thin px-two py-half"
+							style={{ backgroundColor: CategoryColors.coral, borderColor: theme.text }}
+						>
+							<ThemedText className="text-center" style={textOverrides.brandTagText} numberOfLines={1}>
+								{selectedStation.brand}
+							</ThemedText>
+						</View>
+
+						<ThemedText type="small" themeColor="textSecondary">
+							{toTitleCase(selectedStation.municipality)}/{selectedStation.state}
+						</ThemedText>
+
+						<View
+							className="mt-two items-center self-start border-thin px-two py-half"
+							style={{
+								backgroundColor: selectedStation.isEthanolAdvantageous ? CategoryColors.green : CategoryColors.coral,
+								borderColor: theme.text,
+							}}
+						>
+							<ThemedText className="text-center" style={textOverrides.brandTagText} numberOfLines={1}>
+								{selectedStation.isEthanolAdvantageous ? "Etanol vale mais" : "Gasolina vale mais"}
+							</ThemedText>
+						</View>
+
+						<ThemedText type="default" className="mt-two">
+							Etanol R$ {selectedStation.ethanolPrice.toFixed(2)} · Gasolina R$ {selectedStation.gasolinePrice.toFixed(2)}
+						</ThemedText>
+						<ThemedText type="small" themeColor="textSecondary">
+							razão {selectedStation.ratio.toFixed(2)}
+						</ThemedText>
+
+						<View className="mt-three flex-row">
+							<HardShadowBox
+								offset={3}
+								className="px-three py-one"
+								onPress={() =>
+									openInMaps({
+										name: selectedStation.stationName,
+										municipality: selectedStation.municipality,
+										state: selectedStation.state,
+									})
+								}
+							>
+								<ThemedText type="smallBold">📍 Ver no mapa</ThemedText>
+							</HardShadowBox>
+						</View>
+					</>
+				)}
+			</VintageWindowModal>
 
 			<VintageWindowModal
 				visible={stateModalVisible}
