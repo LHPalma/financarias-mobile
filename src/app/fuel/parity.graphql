@@ -1,0 +1,19 @@
+# ethanolGasolineParity filtra em memória, não no Postgres (TDR-001) — mesmo
+# paginado, a base inteira do estado é lida antes do corte. $state continua
+# obrigatório pra não puxar o Brasil inteiro de uma vez.
+query EthanolGasolineParityByState($state: String!) {
+	ethanolGasolineParity(where: { state: { eq: $state } }, order: { ratio: ASC }, first: 20) {
+		edges {
+			node {
+				stationName
+				brand
+				municipality
+				state
+				ethanolPrice
+				gasolinePrice
+				ratio
+				isEthanolAdvantageous
+			}
+		}
+	}
+}
