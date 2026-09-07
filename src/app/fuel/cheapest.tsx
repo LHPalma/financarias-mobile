@@ -118,6 +118,10 @@ const textOverrides = {
 	price: { fontSize: 18, lineHeight: 20 },
 	priceUnit: { fontSize: 10 },
 	regionModalContent: { minHeight: 0 },
+	// smallBold (14px) quebra linha em códigos largos (AM/MA/MG/MT/MS/PA/PB) nos
+	// 44px do chip em algumas fontes de device físico — a 2ª linha vaza pra fora
+	// do card e aparece por cima da sombra do HardShadowBox atrás dele.
+	stateChipText: { fontSize: 12, lineHeight: 14 },
 } as const;
 
 export default function CheapestFuelPricesScreen() {
@@ -282,10 +286,12 @@ export default function CheapestFuelPricesScreen() {
 								key={state.code}
 								offset={2}
 								onPress={() => toggleState(state.code)}
-								className="w-[44px] items-center px-two py-one"
+								className="w-[44px] items-center px-one py-one"
 								style={active ? { backgroundColor: AccentColor } : undefined}
 							>
-								<ThemedText type="smallBold">{state.code}</ThemedText>
+								<ThemedText type="smallBold" style={textOverrides.stateChipText} numberOfLines={1}>
+									{state.code}
+								</ThemedText>
 							</HardShadowBox>
 						);
 					})}
