@@ -300,6 +300,7 @@ export default function CheapestFuelPricesScreen() {
 				<View className="mt-three flex-row">
 					<HardShadowBox
 						offset={3}
+						alignSelf="flex-start"
 						className={selectedStates.length === 0 ? "px-three py-one opacity-40" : "px-three py-one"}
 						pressedStyle={{ backgroundColor: CategoryColors.coral }}
 						onPress={selectedStates.length > 0 ? () => setSelectedStates([]) : undefined}
