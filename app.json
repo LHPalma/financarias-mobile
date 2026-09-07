@@ -32,6 +32,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Usamos sua localização pra sugerir automaticamente o estado nas buscas do app."
+        }
       ]
     ],
     "experiments": {
