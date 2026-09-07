@@ -59,6 +59,10 @@ const textOverrides = {
 	priceUnit: { fontSize: 9 },
 	stateModalContent: { minHeight: 0 },
 	stationModalContent: { minHeight: 0 },
+	// smallBold (14px) quebra linha em códigos largos (AM/MA/MG/MT/MS/PA/PB) nos
+	// 44px do chip em algumas fontes de device físico — a 2ª linha vaza pra fora
+	// do card e aparece por cima da sombra do HardShadowBox atrás dele.
+	stateChipText: { fontSize: 12, lineHeight: 14 },
 } as const;
 
 export default function EthanolGasolineParityScreen() {
@@ -250,10 +254,12 @@ export default function EthanolGasolineParityScreen() {
 									setManualState(item.code);
 									setStateModalVisible(false);
 								}}
-								className="w-[44px] items-center px-two py-one"
+								className="w-[44px] items-center px-one py-one"
 								style={active ? { backgroundColor: AccentColor } : undefined}
 							>
-								<ThemedText type="smallBold">{item.code}</ThemedText>
+								<ThemedText type="smallBold" style={textOverrides.stateChipText} numberOfLines={1}>
+									{item.code}
+								</ThemedText>
 							</HardShadowBox>
 						);
 					})}
