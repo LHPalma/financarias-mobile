@@ -1,4 +1,4 @@
-import { gql, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import { useState } from "react";
 import { FlatList, Linking, Platform, Pressable, View } from "react-native";
 
@@ -8,88 +8,15 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { VintageWindowModal } from "@/components/vintage-window-modal";
 import { AccentColor, CategoryColors } from "@/constants/theme";
+import { CheapestFuelPricesByStateDocument, CheapestFuelPricesDocument } from "@/generated/graphql";
+import type { CheapestFuelPricesQuery } from "@/generated/graphql";
 import { useTheme } from "@/hooks/use-theme";
 
-const FUEL_STATION_FIELDS = gql`
-	fragment FuelStationFields on FuelStation {
-		name
-		brand
-		municipality
-		state
-		street
-		number
-		complement
-		neighborhood
-		postalCode {
-			value
-		}
-	}
-`;
+// Duas queries (não $where opcional, que estoura custo HC0047 mesmo com null) — geradas de cheapest.graphql via `npm run codegen`, não editar graphql.ts na mão.
 
-// Duas queries, não uma com $where opcional: quando o filtro vem como variável de um
-// tipo genérico (FuelPriceFilterInput), o HotChocolate assume o pior caso de custo
-// possível pra esse tipo (mesmo com valor null em runtime) e recusa a query
-// (HC0047, "maximum allowed field cost exceeded"). Um `where` com a estrutura fixa
-// na própria query (só a lista de estados vem por variável) calcula o custo real
-// e passa — mas exige uma query sem o campo `where` pro caso "sem filtro".
-const CHEAPEST_FUEL_PRICES = gql`
-	${FUEL_STATION_FIELDS}
-	query CheapestFuelPrices($product: FuelProduct!) {
-		cheapestFuelPrices(product: $product, first: 20) {
-			edges {
-				node {
-					id
-					salePrice
-					collectedOn
-					fuelStation {
-						...FuelStationFields
-					}
-				}
-			}
-		}
-	}
-`;
-
-const CHEAPEST_FUEL_PRICES_BY_STATE = gql`
-	${FUEL_STATION_FIELDS}
-	query CheapestFuelPricesByState($product: FuelProduct!, $states: [String!]) {
-		cheapestFuelPrices(product: $product, first: 20, where: { fuelStation: { state: { in: $states } } }) {
-			edges {
-				node {
-					id
-					salePrice
-					collectedOn
-					fuelStation {
-						...FuelStationFields
-					}
-				}
-			}
-		}
-	}
-`;
-
-type FuelPriceNode = {
-	id: number;
-	salePrice: number;
-	collectedOn: string;
-	fuelStation: {
-		name: string;
-		brand: string;
-		municipality: string;
-		state: string;
-		street: string | null;
-		number: string | null;
-		complement: string | null;
-		neighborhood: string | null;
-		postalCode: { value: string } | null;
-	};
-};
-
-type CheapestFuelPricesData = {
-	cheapestFuelPrices: {
-		edges: { node: FuelPriceNode }[];
-	};
-};
+type FuelPriceNode = NonNullable<
+	NonNullable<CheapestFuelPricesQuery["cheapestFuelPrices"]>["edges"]
+>[number]["node"];
 
 const FUEL_PRODUCTS = [
 	{ label: "Gasolina", value: "GASOLINE" },
@@ -183,9 +110,7 @@ function regionChipLabel(selectedStates: string[]): string {
 	return `${selectedStates.length} estados`;
 }
 
-// Ajustes que sobrescrevem o `type` do ThemedText ficam em `style`, não em className: duas
-// utilitárias de font-size na mesma className seriam desempatadas pela ordem da folha gerada,
-// não pela ordem escrita — enquanto `style` inline vence className por especificidade.
+// style, não className: duas classes de font-size na mesma string empatam pela ordem da folha gerada, não pela ordem escrita.
 const textOverrides = {
 	stationName: { fontSize: 13 },
 	brandTagText: { fontSize: 10, color: "#FFFFFF" },
@@ -203,14 +128,14 @@ export default function CheapestFuelPricesScreen() {
 	const [regionModalVisible, setRegionModalVisible] = useState(false);
 
 	const hasStateFilter = selectedStates.length > 0;
-	const { data, loading, error } = useQuery<CheapestFuelPricesData>(
-		hasStateFilter ? CHEAPEST_FUEL_PRICES_BY_STATE : CHEAPEST_FUEL_PRICES,
+	const { data, loading, error } = useQuery(
+		hasStateFilter ? CheapestFuelPricesByStateDocument : CheapestFuelPricesDocument,
 		{
 			variables: hasStateFilter ? { product, states: selectedStates } : { product },
 		},
 	);
 
-	const prices = data?.cheapestFuelPrices.edges.map((edge: { node: FuelPriceNode }) => edge.node) ?? [];
+	const prices = (data?.cheapestFuelPrices?.edges ?? []).map((edge: { node: FuelPriceNode }) => edge.node);
 
 	function toggleState(code: string) {
 		setSelectedStates((current) =>

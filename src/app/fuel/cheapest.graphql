@@ -1,0 +1,44 @@
+fragment FuelStationFields on FuelStation {
+	name
+	brand
+	municipality
+	state
+	street
+	number
+	complement
+	neighborhood
+	postalCode {
+		value
+	}
+}
+
+# Duas queries (não $where opcional, que estoura custo HC0047 mesmo com null) — shape fixo, só a lista de estados por variável.
+query CheapestFuelPrices($product: FuelProduct!) {
+	cheapestFuelPrices(product: $product, first: 20) {
+		edges {
+			node {
+				id
+				salePrice
+				collectedOn
+				fuelStation {
+					...FuelStationFields
+				}
+			}
+		}
+	}
+}
+
+query CheapestFuelPricesByState($product: FuelProduct!, $states: [String!]) {
+	cheapestFuelPrices(product: $product, first: 20, where: { fuelStation: { state: { in: $states } } }) {
+		edges {
+			node {
+				id
+				salePrice
+				collectedOn
+				fuelStation {
+					...FuelStationFields
+				}
+			}
+		}
+	}
+}
